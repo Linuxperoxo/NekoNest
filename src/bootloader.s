@@ -17,37 +17,37 @@
 ; Como funciona o bootloader?
 ;
 ; 1. Inicialização do computador:
-;    Quando o computador é ligado, o primeiro código executado é o da BIOS. 
-;    A BIOS realiza o processo de inicialização do hardware, realizando verificações e configurando os dispositivos necessários, 
-;    como a memória, o teclado, o processador, e os discos.
+;    Quando o computador é ligado, o primeiro cóDIgo executado é o da BIOS. 
+;    A BIOS realiza o procESso de inicialização do hardware, realizando verificações e configurando os DIspositivos necessários, 
+;    como a memória, o teclado, o procESsador, e os DIscos.
 ;
 ; 2. Localização do MBR:
-;    Após a inicialização, a BIOS começa a procurar por um Master Boot Record (MBR) nos discos. O MBR está localizado no primeiro 
-;    setor de cada disco (sector 0), que tem 512 bytes. Esse setor contém o código inicial de boot, que é o bootloader, que será 
+;    Após a inicialização, a BIOS começa a procurar por um Master Boot Record (MBR) nos DIscos. O MBR EStá localizado no primeiro 
+;    setor de cada DIsco (sector 0), que tem 512 bytES. Esse setor contém o código inicial de boot, que é o bootloader, que será 
 ;    executado em seguida.
 ;
 ; 3. Validação do MBR:
-;    Quando a BIOS encontra o setor 0, ela verifica os últimos 2 bytes (512º byte), chamados de assinatura do MBR. Esses dois 
-;    bytes devem ser **0x55** (no byte 511) e **0xAA** (no byte 512), respectivamente. Essa assinatura é o que indica à BIOS 
-;    que o setor contém um código de boot válido.
+;    Quando a BIOS encontra o setor 0, ela verifica os últimos 2 bytES (512º byte), chamados de assinatura do MBR. Esses dois 
+;    bytES devem ser **0x55** (no byte 511) e **0xAA** (no byte 512), respectivamente. Essa assinatura é o que inDIca à BIOS 
+;    que o setor contém um cóDIgo de boot válido.
 ;
 ; 4. Carregamento do MBR:
-;    Caso a assinatura esteja correta, a BIOS então carrega o conteúdo do MBR para o endereço **0x7C00** na memória. Este é o 
-;    endereço padrão onde o bootloader será carregado, e a BIOS então passa o controle para esse endereço, ou seja, ela começa 
-;    a execução do código do bootloader.
+;    Caso a assinatura ESteja correta, a BIOS então carrega o conteúdo do MBR para o endereço **0x7C00** na memória. Este é o 
+;    endereço padrão onde o bootloader será carregado, e a BIOS então passa o controle para ESse endereço, ou seja, ela começa 
+;    a execução do cóDIgo do bootloader.
 ;
 ; 5. O que acontece depois?
-;    A partir daí, o bootloader pode começar a executar, carregando o sistema operacional ou qualquer outro código necessário 
+;    A partir daí, o bootloader pode começar a executar, carregando o sistema operacional ou qualquer outro cóDIgo necESsário 
 ;    para iniciar o computador.
 ;
-; Em resumo, o processo de boot é o seguinte:
+; Em rESumo, o processo de boot é o seguinte:
 ; 1. A BIOS inicializa o hardware.
-; 2. A BIOS busca o MBR no disco e valida a assinatura (0x55AA).
+; 2. A BIOS busca o MBR no DIsco e valida a assinatura (0x55AA).
 ; 3. Se a assinatura for válida, a BIOS carrega o MBR para 0x7C00 e passa o controle para o bootloader.
 ;
 
-bits 16
-org 0x7C00
+BITS 16
+ORG 0x7C00
 
 %define BASE_FRAMEBUFFER_ADDRS 0xB800
 %define MAX_FRAMEBUFFER_OFFSET 80*25*2
@@ -55,42 +55,42 @@ org 0x7C00
 
 section .text
 _start:
-  mov ax, BASE_FRAMEBUFFER_ADDRS
-  mov es, ax
-  xor di, di ; Offset do framebuffer
+  MOV AX, BASE_FRAMEBUFFER_ADDRS
+  MOV ES, AX
+  XOR DI, DI ; Offset do framebuffer
 
   .loopcond:
-    cmp di, MAX_FRAMEBUFFER_OFFSET
-    jz .loopexit
+    CMP DI, MAX_FRAMEBUFFER_OFFSET
+    JZ .loopexit
 
   .loopexec:
-    mov [es:di], byte 0x00
-    mov [es:di + 1], byte DEFAULT_COLOR
-    add di, 2
-    jmp .loopcond
+    MOV [ES:DI], byte 0x00
+    MOV [ES:DI + 1], byte DEFAULT_COLOR
+    ADD DI, 2
+    JMP .loopcond
 
   .loopexit:
   
-  xor di, di
+  XOR DI, DI
 
-  cli ; Ignorando interrupções externas
+  CLI ; Ignorando interrupçõES externas
 
-  mov [es:di], byte 'H'
-  mov [es:di + 2], byte 'E'
-  mov [es:di + 4], byte 'L'
-  mov [es:di + 6], byte 'L'
-  mov [es:di + 8], byte 'O'
-  mov [es:di + 10], byte ','
-  mov [es:di + 12], byte ' '
-  mov [es:di + 14], byte 'W'
-  mov [es:di + 16], byte 'O'
-  mov [es:di + 18], byte 'R'
-  mov [es:di + 20], byte 'L'
-  mov [es:di + 22], byte 'D'
-  mov [es:di + 24], byte '!'
+  MOV [ES:DI], byte 'H'
+  MOV [ES:DI + 2], byte 'E'
+  MOV [ES:DI + 4], byte 'L'
+  MOV [ES:DI + 6], byte 'L'
+  MOV [ES:DI + 8], byte 'O'
+  MOV [ES:DI + 10], byte ','
+  MOV [ES:DI + 12], byte ' '
+  MOV [ES:DI + 14], byte 'W'
+  MOV [ES:DI + 16], byte 'O'
+  MOV [ES:DI + 18], byte 'R'
+  MOV [ES:DI + 20], byte 'L'
+  MOV [ES:DI + 22], byte 'D'
+  MOV [ES:DI + 24], byte '!'
 
-  hlt ; Pausando o processador até uma interrupção
+  HLT ; Pausando o procESsador até uma interrupção
 
 times 510 - ($ - $$) db 0 ; Garantindo que o binário tenha 512 bytes como explicado acima
-dw 0xAA55 ; Assinatura de boot válido
+DW 0xAA55 ; Assinatura de boot válido
 
