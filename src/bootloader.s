@@ -53,8 +53,7 @@ ORG 0x7C00
 %define MAX_FRAMEBUFFER_OFFSET 80*25*2
 %define DEFAULT_COLOR 0x0F ; Caractere branco com fundo preto
 
-section .text
-_start:
+SECTION .text
   MOV AX, BASE_FRAMEBUFFER_ADDRS
   MOV ES, AX
   XOR DI, DI ; Offset do framebuffer
