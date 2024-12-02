@@ -35,8 +35,6 @@ $(BOOTLOADER_BIN):
 $(IMG_FILE): $(BOOTLOADER_BIN) $(LOADER_BIN)
 	cat $^ > $@
 
-image: all
-
 clean:
 	rm -rf $(BUILD_DIR)
 
