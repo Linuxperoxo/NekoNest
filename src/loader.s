@@ -44,3 +44,5 @@ SECTION .text
   ;
 
   JMP $
+
+TIMES 512 - ($ - $$) DB 0x00
