@@ -139,6 +139,16 @@
 
 [ORG 0x7C00]
 
+%define DATA_PORT       0x1F0      ; Porta de dados
+%define ERROR_PORT      0x1F1      ; Porta de erro
+%define SECTOR_COUNT    0x1F2      ; Número de setores
+%define SECTOR_NUMBER   0x1F3      ; Número do setor
+%define CYLINDER_LOW    0x1F4      ; Cilindro (bits baixos)
+%define CYLINDER_HIGH   0x1F5      ; Cilindro (bits altos)
+%define DRIVE_HEAD      0x1F6      ; Seleção de drive e cabeça
+%define STATUS_PORT     0x1F7      ; Porta de status
+%define COMMAND_PORT    0x1F7      ; Porta de comando
+
 ;
 ; Informações do VGA para o PRINTF e CLEANF
 ;
@@ -295,14 +305,65 @@ GDT_entries_ptr:
 [BITS 32]
 protected_mode:
   CLEANF 0x00
-  PRINTF boot_msg, DEFAULT_COLOR, 0x00
-  SLEEP 0x00 
-  CLEANF 0x01
 
-  JMP $ ; Loop infinito (temporário)
+  .ata_chs_read:
+    MOV DX, 0x1F6      ; Porta que recebe o drive e o cabeçote
+    MOV AL, 0b00000000 ; O cabeçote é os 4 bits menos significativos
+    OR AL, 0b10100000  ; Por default os 4 bits mais significativos são 1010 
+    OUT DX, AL
 
+    MOV DX, 0x1F2 ; Porta de contagem de setores 
+    MOV AL, 0x02  ; Quantos setores vamos ler
+    OUT DX, AL
+
+    MOV DX, 0x1F3 ; Porta do número do setor
+    MOV AL, 0x02  ; Setor no qual vamos começar a leitura 
+    
+    MOV DX, 0x1F4 ; Porta cilindro baixo
+    XOR AL, AL    ; Número do cilindro (0) (bits baixos)
+    OUT DX, AL
+    MOV DX, 0x1F5 ; Porta cilindro alto
+    XOR AL, AL    ; Número do cilindro (0) (bits baixos)
+    OUT DX, AL
+
+    MOV DX, 0x1F7 ; Porta de comando
+    MOV AL, 0x20  ; Comando de leitura
+    OUT DX, AL   
+
+    .still_going:
+      IN AL, DX     ; Verificando se a leitura foi completa e se está disponivel no buffer no controlador
+      TEST AL, 8    ; Fazendo operação AND para ver se o BITS DRQ está setado como 1
+      JZ .still_going
+    
+    MOV DX, ERROR_PORT
+    IN AL, DX
+    CMP AL, 0x00
+    JNZ .error
+
+    MOV EBX, 0x100000
+    MOV DX, 0x1F0 
+    
+    .read_sector_loop:
+      IN AX, DX
+      MOV [EBX], AX
+      ADD EBX, 0x02
+      CMP EBX, 0x100100
+      JNZ .read_sector_loop  
+  
+  PRINTF all_done, DEFAULT_COLOR, 0x01
+  JMP $
+  
+  .error:
+    PRINTF disk_error_msg, DEFAULT_COLOR, 0x00
+    JMP $
 boot_msg:
   DB "NEKONEST: BOOTING KERNEL...", 0x00
+
+disk_error_msg:
+  DB "NEKONEST: READ DISK ERROR", 0x00
+
+all_done:
+  DB "NEKONEST: IS WORKING :D", 0x00
 
 MBR_sector_sig:
   TIMES 510 - ($ - $$) DB 0x00 ; Garantindo que o binário final tenha 512 bytes para a BIOS considerar como MBR bootável
