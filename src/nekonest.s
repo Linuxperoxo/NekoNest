@@ -307,27 +307,27 @@ protected_mode:
   CLEANF 0x00
 
   .ata_chs_read:
-    MOV DX, 0x1F6      ; Porta que recebe o drive e o cabeçote
+    MOV DX, DRIVE_HEAD ; Porta que recebe o drive e o cabeçote
     MOV AL, 0b00000000 ; O cabeçote é os 4 bits menos significativos
     OR AL, 0b10100000  ; Por default os 4 bits mais significativos são 1010 
     OUT DX, AL
 
-    MOV DX, 0x1F2 ; Porta de contagem de setores 
-    MOV AL, 0x02  ; Quantos setores vamos ler
+    MOV DX, SECTOR_COUNT ; Porta de contagem de setores 
+    MOV AL, 0x01         ; Quantos setores vamos ler
     OUT DX, AL
 
-    MOV DX, 0x1F3 ; Porta do número do setor
-    MOV AL, 0x02  ; Setor no qual vamos começar a leitura 
+    MOV DX, SECTOR_NUMBER ; Porta do número do setor
+    MOV AL, 0x02          ; Setor no qual vamos começar a leitura 
     
-    MOV DX, 0x1F4 ; Porta cilindro baixo
-    XOR AL, AL    ; Número do cilindro (0) (bits baixos)
+    MOV DX, CYLINDER_LOW ; Porta cilindro baixo
+    XOR AL, AL           ; Número do cilindro (0) (bits baixos)
     OUT DX, AL
-    MOV DX, 0x1F5 ; Porta cilindro alto
-    XOR AL, AL    ; Número do cilindro (0) (bits baixos)
+    MOV DX, CYLINDER_HIGH ; Porta cilindro alto
+    XOR AL, AL            ; Número do cilindro (0) (bits baixos)
     OUT DX, AL
 
-    MOV DX, 0x1F7 ; Porta de comando
-    MOV AL, 0x20  ; Comando de leitura
+    MOV DX, COMMAND_PORT ; Porta de comando
+    MOV AL, 0x20         ; Comando de leitura
     OUT DX, AL   
 
     .still_going:
