@@ -306,6 +306,12 @@ GDT_entries_ptr:
 protected_mode:
   CLEANF 0x00
 
+  ;
+  ; Para mais informações de como funciona a leitura e escrita de um disco CHS: https://wiki.osdev.org/ATA_read/write_sectors
+  ;
+  ; Lá você pode ver um código que explica bem como funciona a comunicação com o controlador ATA/SATA
+  ;
+
   .ata_chs_read:
     MOV DX, DRIVE_HEAD ; Porta que recebe o drive e o cabeçote
     MOV AL, 0b00000000 ; O cabeçote é os 4 bits menos significativos
@@ -317,7 +323,8 @@ protected_mode:
     OUT DX, AL
 
     MOV DX, SECTOR_NUMBER ; Porta do número do setor
-    MOV AL, 0x02          ; Setor no qual vamos começar a leitura 
+    MOV AL, 0x02          ; Setor no qual vamos começar a leitura
+    OUT DX, AL
     
     MOV DX, CYLINDER_LOW ; Porta cilindro baixo
     XOR AL, AL           ; Número do cilindro (0) (bits baixos)
@@ -330,24 +337,24 @@ protected_mode:
     MOV AL, 0x20         ; Comando de leitura
     OUT DX, AL   
 
+    MOV DX, ERROR_PORT ; Verificando se houve algum erro
+    IN AL, DX          ; Se AL voltar como 1 houve algum erro, com isso nós podemos ver a porta 0x1F7 para obter mais detalhes do error, não vamos fazer isso aqui
+    CMP AL, 0x00
+    JNZ .error
+    
     .still_going:
       IN AL, DX     ; Verificando se a leitura foi completa e se está disponivel no buffer no controlador
       TEST AL, 8    ; Fazendo operação AND para ver se o BITS DRQ está setado como 1
       JZ .still_going
     
-    MOV DX, ERROR_PORT
-    IN AL, DX
-    CMP AL, 0x00
-    JNZ .error
-
-    MOV EBX, 0x100000
-    MOV DX, 0x1F0 
+    MOV EBX, 0x100000 ; Endereço de destino
+    MOV DX, DATA_PORT 
     
-    .read_sector_loop:
-      IN AX, DX
-      MOV [EBX], AX
-      ADD EBX, 0x02
-      CMP EBX, 0x100100
+    .read_sector_loop:  ; Loop de leitura de dados
+      IN AX, DX         ; A cada leitura da porta de dados o controlador do disco incrementa ele automaticamente
+      MOV [EBX], AX     ; Movendo a word (16 bits) para o endereço 0x100000
+      ADD EBX, 0x02     ; Incrementando até ler as 256 words
+      CMP EBX, 0x100100 ; Vendo se os 512 Bytes foram lidos
       JNZ .read_sector_loop  
   
   PRINTF all_done, DEFAULT_COLOR, 0x01
@@ -356,14 +363,16 @@ protected_mode:
   .error:
     PRINTF disk_error_msg, DEFAULT_COLOR, 0x00
     JMP $
-boot_msg:
-  DB "NEKONEST: BOOTING KERNEL...", 0x00
 
-disk_error_msg:
-  DB "NEKONEST: READ DISK ERROR", 0x00
+bootloader_msg:
+  boot:
+    DB "NEKONEST: BOOTING KERNEL...", 0x00
 
-all_done:
-  DB "NEKONEST: IS WORKING :D", 0x00
+  disk_error:
+    DB "NEKONEST: READ DISK ERROR", 0x00
+
+  all_done:
+    DB "NEKONEST: IS WORKING :D", 0x00
 
 MBR_sector_sig:
   TIMES 510 - ($ - $$) DB 0x00 ; Garantindo que o binário final tenha 512 bytes para a BIOS considerar como MBR bootável
