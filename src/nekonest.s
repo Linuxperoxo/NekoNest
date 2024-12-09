@@ -6,7 +6,7 @@
 ;    |  COPYRIGHT : (c) 2024 per Linuxperoxo.     |
 ;    |  AUTHOR    : Linuxperoxo                   |
 ;    |  FILE      : nekonest.s                    |
-;    |  SRC MOD   : 06/12/2024                    |
+;    |  SRC MOD   : 09/12/2024                    |
 ;    |  VERSION   : 0.0-1                         |
 ;    |                                            |
 ;    O--------------------------------------------/
@@ -138,6 +138,10 @@
 ; ==============================================
 
 [ORG 0x7C00]
+
+;
+; Portas para manipulação do controlador ATA
+;
 
 %define DATA_PORT       0x1F0      ; Porta de dados
 %define ERROR_PORT      0x1F1      ; Porta de erro
@@ -396,25 +400,17 @@ DISKERR:
   CALL PRINTF
 
   JMP $
-    
-  disk_error:
-    DB "NEKONEST: READ DISK ERROR", 0x00
 
 ;
 ; Mensagens do NEKONEST :)
 ;
 
-boot:
-  DB "NEKONEST: BOOTING KERNEL...", 0x00
-
-
-all_done:
-  DB "NEKONEST: IS WORKING :D", 0x00
+boot: DB "NEKONEST: BOOTING KERNEL...", 0x00
+disk_error: DB "NEKONEST: READ DISK ERROR", 0x00
 
 ;
 ; Assinatura de Setor MBR bootável
 ;
 
-MBR_sector_sig:
-  TIMES 510 - ($ - $$) DB 0x00 ; Garantindo que o binário final tenha 512 bytes para a BIOS considerar como MBR bootável
-  DW 0xAA55 ; Assinatura de setor MBR bootável válido
+TIMES 510 - ($ - $$) DB 0x00 ; Garantindo que o binário final tenha 512 bytes para a BIOS considerar como MBR bootável
+DW 0xAA55 ; Assinatura de setor MBR bootável válido  
