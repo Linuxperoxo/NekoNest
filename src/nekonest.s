@@ -6,7 +6,7 @@
 ;    |  COPYRIGHT : (c) 2024 per Linuxperoxo.     |
 ;    |  AUTHOR    : Linuxperoxo                   |
 ;    |  FILE      : nekonest.s                    |
-;    |  SRC MOD   : 09/12/2024                    |
+;    |  SRC MOD   : 11/12/2024                    |
 ;    |  VERSION   : 0.0-1                         |
 ;    |                                            |
 ;    O--------------------------------------------/
@@ -140,7 +140,6 @@
 [ORG 0x7C00]
 
 %define SECTOR_BYTE_SIZE 512
-%define SECTOR_TO_READ 1
 %define TOTAL_BYTES_TO_READ SECTOR_BYTE_SIZE * SECTOR_TO_READ
 %define KERNEL_ADDRS_INIT 0x100000
 
@@ -252,6 +251,15 @@ protected_mode:
   MOV ESP, 0xFFFF ; Configurando uma stack temporária, ela vai ser substituida pelo kernel
   CALL CLEANF
  
+  ;
+  ; Parâmetros para leitura do disco ATA
+  ;
+
+  PUSH word 0x00               ; Cabeçote
+  PUSH word 0x10               ; Setores à serem lidos
+  PUSH word 0x02               ; Número do setor
+  PUSH word 0x0000             ; Cilíndro alto e baixo
+  PUSH dword KERNEL_ADDRS_INIT ; Endereço de destino
   CALL ATA_CHS_READ
 
   MOV AL, DEFAULT_COLOR
@@ -350,25 +358,73 @@ ATA_CHS_READ:
   ; Rotina de leitura do setor do kernel
   ;
 
+  PUSH EAX
+  PUSH EBX
+  PUSH ECX
+  PUSH EDX
+  PUSH EDI
+
+  MOV EDI, dword [ESP + 24] ; Endereço de destino 
+  MOV CX, word [ESP + 28]   ; Cilindro alto e baixo
+  MOV AL, byte [ESP + 30]   ; Número do setor
+  MOV AH, byte [ESP + 32]   ; Quantos setores vamos ler
+  MOV BL, byte [ESP + 34]   ; Cabeçote de leitura
+
+  .read_disc:
+
+  ;
+  ; Cabeçote de leitura está em BL
+  ;
+
+  PUSH AX
+
+  MOV AL, BL
+  
   MOV DX, DRIVE_HEAD ; Porta que recebe o drive e o cabeçote
-  MOV AL, 0b00000000 ; O cabeçote é os 4 bits menos significativos
   OR AL, 0b10100000  ; Por default os 4 bits mais significativos são 1010 
   OUT DX, AL
 
-  MOV DX, SECTOR_COUNT   ; Porta de contagem de setores 
-  MOV AL, SECTOR_TO_READ ; Quantos setores vamos ler
+  POP AX
+
+  ;
+  ; A quantidade de setores que vamos ler está em AH
+  ;
+
+  PUSH AX
+
+  MOV AL, 0x01
+
+  MOV DX, SECTOR_COUNT   ; Porta de contagem de setores
   OUT DX, AL
 
+  POP AX
+
+  ;
+  ; O Setor de leitura está em AL
+  ;
+
   MOV DX, SECTOR_NUMBER ; Porta do número do setor
-  MOV AL, 0x02          ; Setor no qual vamos começar a leitura
   OUT DX, AL
-    
+
+  ;
+  ; O Cilindro alto está em CL e o cilindro baixo em CH 
+  ;
+
+  PUSH AX
+
+  MOV AX, CX
+
   MOV DX, CYLINDER_LOW ; Porta cilindro baixo
-  XOR AL, AL           ; Número do cilindro (0) (bits baixos)
   OUT DX, AL
+  
+  MOV AL, AH
+
   MOV DX, CYLINDER_HIGH ; Porta cilindro alto
-  XOR AL, AL            ; Número do cilindro (0) (bits baixos)
   OUT DX, AL
+
+  ;
+  ; Enviando comando para o controlador ATA
+  ;
 
   MOV DX, COMMAND_PORT ; Porta de comando
   MOV AL, 0x20         ; Comando de leitura
@@ -378,25 +434,42 @@ ATA_CHS_READ:
   IN AL, DX          ; Se AL voltar como 1 houve algum erro, com isso nós podemos ver a porta 0x1F7 para obter mais detalhes do error, não vamos fazer isso aqui
   CMP AL, 0x00
   JNZ DISKERR
-   
+  
   MOV DX, STATUS_PORT
 
   .still_going:
     IN AL, DX     ; Verificando se a leitura foi completa e se está disponivel no buffer no controlador
     TEST AL, 8    ; Fazendo operação AND para ver se o BITS DRQ está setado como 1
     JZ .still_going
-   
-  MOV EBX, 0x100000 ; Endereço de destino
+
   MOV DX, DATA_PORT 
+  XOR SI, SI
 
   .read_sector_loop:  ; Loop de leitura de dados
     IN AX, DX         ; A cada leitura da porta de dados o controlador do disco incrementa ele automaticamente
-    MOV [EBX], AX     ; Movendo a word (16 bits) para o endereço 0x100000
-    ADD EBX, 0x02     ; Incrementando até ler as 256 words
-    CMP EBX, TOTAL_BYTES_TO_READ + KERNEL_ADDRS_INIT
+    MOV [EDI], AX     ; Movendo a word (16 bits) para o endereço 0x100000
+    ADD EDI, 0x02     ; Incrementando até ler as 256 words
+    ADD SI, 0x02
+    CMP SI, SECTOR_BYTE_SIZE ; Vendo se copiamos os 512 bytes lidos do setor 
     JNZ .read_sector_loop
-    
-  RET
+
+  POP AX ; Restaurando AX para ver os argumentos de leitura de setores e número de setor 
+
+  DEC AH
+  CMP AH, 0x00
+
+  JZ .return
+
+  INC AL
+  JMP .read_disc
+
+  .return:
+    POP ESI
+    POP EDX
+    POP ECX
+    POP EBX
+    POP EAX
+    RET
 ;
 ; Rotina DISKERR
 ;
