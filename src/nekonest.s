@@ -258,7 +258,7 @@ protected_mode:
   ;
 
   PUSH word 0x00               ; Cabeçote
-  PUSH word 0x0F               ; Setores à serem lidos
+  PUSH word 0x10               ; Setores à serem lidos
   PUSH word 0x02               ; Número do setor
   PUSH word 0x0000             ; Cilíndro alto e baixo
   PUSH dword KERNEL_ADDRS_INIT ; Endereço de destino
